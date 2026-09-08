@@ -11,9 +11,10 @@ func simulate(ratio: float) -> Dictionary:
 	swarm.set_physics_process(false)
 	swarm.begin_river(Vector2(180, 450), Vector2(1000, 450))
 	for frame in range(180): swarm._physics_process(1.0 / 60)
+	# Sample one wavelength farther downstream, beyond the new ring-to-river entry.
 	# Center at a helix crest; outer lanes near a helix crossing.
 	var tally := [0, 0, 0]
-	swarm.targets = [{"p": Vector2(280, 450)}, {"p": Vector2(340, 525)}, {"p": Vector2(340, 375)}]
+	swarm.targets = [{"p": Vector2(680, 450)}, {"p": Vector2(740, 525)}, {"p": Vector2(740, 375)}]
 	swarm.target_hit.connect(func(index: int, _p: Vector2) -> void: tally[index] += 1)
 	swarm.release_river()
 	var positions := PackedVector2Array()

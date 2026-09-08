@@ -19,10 +19,10 @@ func _run() -> void:
 	s.set_physics_process(false)
 	s.begin_charge(Vector2(520, 450))
 	advance(s, 240)
-	for blade in s.swords: check(blade.p.distance_to(s.skill_center) < 32, "All swords must converge while held")
+	for blade in s.swords: check(absf(blade.p.distance_to(s.charge_orbit_center()) - s.charge_radius) < 5, "All swords must form a ring while held")
 	s.release_charge()
 	for i in range(s.swords.size()):
-		check(absf(wrapf(s.swords[i].v.angle() - TAU * i / s.swords.size(), -PI, PI)) < 0.0001, "Burst must cover 360 degrees")
+		check(absf(wrapf(s.swords[i].v.angle() - TAU * i / s.swords.size() - s.elapsed * 0.55, -PI, PI)) < 0.0001, "Burst must cover 360 degrees")
 	advance(s, 60)
 	var outside := 0
 	for blade in s.swords:

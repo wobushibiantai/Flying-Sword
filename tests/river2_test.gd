@@ -18,7 +18,8 @@ func simulate(variant: int, thickness: float, fill: float) -> Dictionary:
 	s.set_physics_process(false)
 	s.begin_river(Vector2(180, 450), Vector2(1000, 450), variant)
 	for frame in range(180): s._physics_process(1.0 / 60)
-	s.targets = [{"p": Vector2(280, 450)}]
+	# Beyond the ring-to-river entry, test the same phase one wavelength downstream.
+	s.targets = [{"p": Vector2(680, 450)}]
 	s.release_river()
 	var snapshot := PackedVector2Array()
 	for frame in range(230):

@@ -29,13 +29,24 @@ var controls: PanelContainer
 var skill_label: Label
 var pointer_skill: bool = false
 var capture_kind: String = ""
+var show_background: bool = true
+var player: Swordsman
+var follow_player: bool = true
+var follow_toggle: CheckButton
 
 func _ready() -> void:
 	var system_font := SystemFont.new()
 	system_font.font_names = PackedStringArray(["Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC"])
 	font = system_font
+	player = preload("res://player.tscn").instantiate()
+	player.position = Vector2(520, 445)
+	player.z_index = 2
+	add_child(player)
+	player.moved.connect(_sync_player)
 	swarm = SwarmScript.new()
+	swarm.z_index = 3 # Flying weapons remain visible above the character (z = 2).
 	add_child(swarm)
+	swarm.return_anchor = player
 	swarm.bounds = Rect2(30, 30, 1030, 840)
 	swarm.target_hit.connect(_on_hit)
 	_build_ui()
@@ -43,18 +54,22 @@ func _ready() -> void:
 	_select_mode(2)
 	test_enabled = "--self-test" in OS.get_cmdline_user_args()
 	capture_enabled = "--capture" in OS.get_cmdline_user_args()
-	for kind in ["river", "river2", "burst"]:
+	player.input_enabled = not test_enabled and not capture_enabled
+	for kind in ["river", "river2", "burst", "charge"]:
 		if "--capture-" + kind in OS.get_cmdline_user_args():
 			capture_enabled = true
 			capture_kind = kind
+			player.input_enabled = false
 			count_slider.value = 96
 			swarm.focus = Vector2(220, 450) if kind.begins_with("river") else Vector2(540, 450)
+			player.position = swarm.focus
 			swarm.trail_lifetime = 0.9
 			if kind.begins_with("river"):
 				swarm.begin_river(swarm.focus, Vector2(1000, 450), 2 if kind == "river2" else 1)
 			else: swarm.begin_charge(swarm.focus)
 
 func _process(delta: float) -> void:
+	_sync_player()
 	if not swarm.paused:
 		clock += delta
 		for target in swarm.targets:
@@ -63,7 +78,7 @@ func _process(delta: float) -> void:
 				target.respawn = maxf(0, target.respawn - delta)
 				if target.respawn == 0:
 					target.hp = 16
-	var mouse := get_global_mouse_position()
+	var mouse := get_local_mouse_position()
 	if swarm.skill == SwordSwarm.Skill.RIVER_AIM and capture_kind.is_empty():
 		swarm.aim_river(mouse)
 	if swarm.bounds.has_point(mouse) and not placing and swarm.skill == SwordSwarm.Skill.NONE:
@@ -84,14 +99,27 @@ func _process(delta: float) -> void:
 		_run_test()
 	if capture_enabled:
 		test_frame += 1
-		if test_frame == 120 and not capture_kind.is_empty():
+		if test_frame == 120 and not capture_kind.is_empty() and capture_kind != "charge":
 			swarm.release_charge()
 			swarm.release_river()
-		var capture_frame := 210 if capture_kind.begins_with("river") else (138 if capture_kind == "burst" else 120)
+		var capture_frame := 210 if capture_kind.begins_with("river") else (240 if capture_kind == "charge" else (138 if capture_kind == "burst" else 120))
 		if test_frame == capture_frame:
 			_capture.call_deferred()
 
+func _sync_player() -> void:
+	if not is_instance_valid(swarm): return
+	player.paused = swarm.paused
+	player.casting = swarm.skill in [SwordSwarm.Skill.CHARGE, SwordSwarm.Skill.RIVER_AIM, SwordSwarm.Skill.RIVER]
+	player.aim = get_local_mouse_position() - player.position
+	if swarm.skill in [SwordSwarm.Skill.CHARGE, SwordSwarm.Skill.RIVER_AIM]:
+		swarm.skill_center = player.position
+	if swarm.skill == SwordSwarm.Skill.NONE and (swarm.mode == SwordSwarm.Mode.HUNT or (swarm.mode == SwordSwarm.Mode.ORBIT and follow_player)):
+		swarm.focus = player.position
+
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		event = event.duplicate()
+		event.position = get_global_transform_with_canvas().affine_inverse() * event.position
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if not event.pressed:
 			drag_center = false
@@ -99,6 +127,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			if placing:
 				_add_target(event.position)
 			elif swarm.skill == SwordSwarm.Skill.NONE:
+				follow_toggle.button_pressed = false
 				swarm.focus = event.position
 				drag_center = swarm.mode == SwordSwarm.Mode.ORBIT
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
@@ -109,6 +138,10 @@ func _unhandled_input(event: InputEvent) -> void:
 					break
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.keycode in [KEY_W, KEY_A, KEY_S, KEY_D, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT]:
+		# Movement polling still sees these keys; stop UI navigation consuming arrows.
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed and pointer_skill:
 		pointer_skill = false
 		swarm.release_charge()
@@ -121,7 +154,7 @@ func _input(event: InputEvent) -> void:
 			return
 		if event.keycode in [KEY_E, KEY_V]:
 			var variant := 2 if event.keycode == KEY_V else 1
-			if event.pressed: swarm.begin_river(swarm.focus, get_global_mouse_position(), variant)
+			if event.pressed: swarm.begin_river(player.position, get_local_mouse_position(), variant)
 			elif swarm.river_variant == variant: swarm.release_river()
 			get_viewport().set_input_as_handled()
 			return
@@ -146,8 +179,7 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _cast_position() -> Vector2:
-	var p := get_global_mouse_position()
-	return p if swarm.bounds.has_point(p) else swarm.focus
+	return player.position
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and is_instance_valid(swarm):
@@ -184,7 +216,7 @@ func _update_hint() -> void:
 	if placing:
 		mode_label.text = "布置靶子  /  左键放置 · 右键移除 · Esc 结束"
 	else:
-		mode_label.text = ["游龙随行  /  移动鼠标，牵引剑群", "逐影追击  /  自动寻敌，穿刺后回旋", "万剑归宗  /  点击或拖动，移动剑阵中心"][swarm.mode]
+		mode_label.text = ["移动鼠标牵引剑群", "自动寻敌，技能回归主角", "环绕跟随主角" if follow_player else "定点环绕 · 点击或拖动改变中心"][swarm.mode]
 
 func _toggle_placing() -> void:
 	placing = not placing
@@ -192,6 +224,7 @@ func _toggle_placing() -> void:
 
 func _toggle_pause() -> void:
 	swarm.paused = not swarm.paused
+	player.paused = swarm.paused
 	pause_button.text = "继续演示    Space" if swarm.paused else "暂停演示    Space"
 
 func _label(parent: Node, text: String, size: int, color: Color = TEXT) -> Label:
@@ -268,21 +301,22 @@ func _build_ui() -> void:
 	burst.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	burst.button_down.connect(func() -> void:
 		pointer_skill = true
-		swarm.begin_charge(swarm.focus))
+		swarm.begin_charge(player.position))
 	burst.button_up.connect(swarm.release_charge)
 	var river := _button(buttons, "剑河 · E", func() -> void: pass)
 	river.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	river.button_down.connect(func() -> void:
 		pointer_skill = true
-		swarm.begin_river(swarm.focus, get_global_mouse_position()))
+		swarm.begin_river(player.position, get_local_mouse_position()))
 	river.button_up.connect(swarm.release_river)
 	var river2 := _button(root, "剑河二型 · V · 按住瞄准", func() -> void: pass)
 	river2.button_down.connect(func() -> void:
 		pointer_skill = true
-		swarm.begin_river(swarm.focus, get_global_mouse_position(), 2))
+		swarm.begin_river(player.position, get_local_mouse_position(), 2))
 	river2.button_up.connect(swarm.release_river)
 	skill_label = _label(root, "Q 按住聚剑，松开散射\nE 按住瞄准，松开剑河", 12, ACCENT)
 	_label(root, "Esc 召回   ·   1 / 2 / 3 切换移动", 12, MUTED)
+	_label(root, "WASD / 方向键 · 八方向移动主角", 12, ACCENT)
 	var tabs := TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	tabs.add_theme_font_override("font", font)
@@ -290,7 +324,7 @@ func _build_ui() -> void:
 	root.add_child(tabs)
 	var general := _tab(tabs, "飞剑")
 	for i in range(3):
-		var button := _button(general, ["1  跟随鼠标", "2  自动追击", "3  定点环绕"][i], _select_mode.bind(i))
+		var button := _button(general, ["1  跟随鼠标", "2  自动追击", "3  主角 / 定点环绕"][i], _select_mode.bind(i))
 		button.toggle_mode = true
 		mode_buttons.append(button)
 	count_label = _label(general, "48 柄", 16, ACCENT)
@@ -307,6 +341,7 @@ func _build_ui() -> void:
 	_label(skills, "天女散花", 16, ACCENT)
 	_label(skills, "在场内按住 Q，在鼠标处聚剑。\n松开后全向爆射，飞出场地再回归。", 12, MUTED)
 	_slider(skills, "爆射速度", 200, 6000, 1800, 50, func(v: float) -> void: swarm.burst_speed = v)
+	_slider(skills, "蓄力环绕半径", 96, 400, 112, 4, func(v: float) -> void: swarm.charge_radius = v)
 	_slider(skills, "回归速度", 50, 1000, 280, 10, func(v: float) -> void: swarm.return_speed = v)
 	_gap(skills, 10)
 	_label(skills, "剑河", 16, ACCENT)
@@ -318,7 +353,17 @@ func _build_ui() -> void:
 	_slider(skills, "螺旋波长", 80, 1600, 400, 20, func(v: float) -> void: swarm.river_wavelength = v)
 	_slider(skills, "剑河前进速度", 100, 4000, 650, 50, func(v: float) -> void: swarm.river_speed = v)
 	_slider(skills, "剑河持续 / 秒", 1, 12, 4, 0.5, func(v: float) -> void: swarm.river_duration = v)
-	var arena := _tab(tabs, "靶场")
+	var arena := _tab(tabs, "角色 / 靶场")
+	_slider(arena, "主角移动速度", 30, 900, 240, 10, func(v: float) -> void: player.move_speed = v)
+	follow_toggle = CheckButton.new()
+	follow_toggle.text = "环绕跟随主角"
+	follow_toggle.button_pressed = true
+	follow_toggle.add_theme_font_override("font", font)
+	follow_toggle.add_theme_font_size_override("font_size", 14)
+	follow_toggle.toggled.connect(func(value: bool) -> void:
+		follow_player = value
+		_update_hint())
+	arena.add_child(follow_toggle)
 	_button(arena, "布置靶子 · T", _toggle_placing)
 	_button(arena, "重置靶子 · R", _reset_targets)
 	_button(arena, "清空靶子", func() -> void: swarm.targets.clear())
@@ -342,7 +387,7 @@ func _tab(tabs: TabContainer, title: String) -> VBoxContainer:
 	return column
 
 func _draw() -> void:
-	draw_rect(Rect2(0, 0, 1440, 900), INK)
+	if show_background: draw_rect(Rect2(0, 0, 1440, 900), INK)
 	if not is_instance_valid(swarm):
 		return
 	if swarm.skill == SwordSwarm.Skill.RIVER_AIM:
@@ -363,8 +408,8 @@ func _draw() -> void:
 	draw_line(focus + Vector2(9, 0), focus + Vector2(17, 0), ACCENT, 1)
 	for target in swarm.targets:
 		_draw_target(target)
-	if placing and swarm.bounds.has_point(get_global_mouse_position()):
-		draw_arc(get_global_mouse_position(), 22, 0, TAU, 48, Color(0.85, 0.8, 0.58, 0.65), 1, true)
+	if placing and swarm.bounds.has_point(get_local_mouse_position()):
+		draw_arc(get_local_mouse_position(), 22, 0, TAU, 48, Color(0.85, 0.8, 0.58, 0.65), 1, true)
 
 func _draw_ellipse(center: Vector2, radius: float, color: Color, start: float, end: float) -> void:
 	var points := PackedVector2Array()

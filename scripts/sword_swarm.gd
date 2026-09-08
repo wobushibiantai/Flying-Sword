@@ -49,6 +49,7 @@ class Sword extends RefCounted:
 		trail_lifetime = clampf(value, 0.02, 4.0)
 		if is_node_ready(): _resize_render_buffers()
 @export_range(200.0, 6000.0) var burst_speed: float = 1800.0
+@export_range(96.0, 400.0) var charge_radius: float = 112.0
 @export_range(50.0, 1000.0) var return_speed: float = 280.0
 @export_range(30.0, 800.0) var river_width: float = 180.0
 @export_range(80.0, 1600.0) var river_wavelength: float = 400.0
@@ -65,6 +66,7 @@ var skill_time: float = 0.0
 var river_distance: float = 0.0
 var mode: Mode = Mode.ORBIT
 var focus := Vector2(520, 445)
+var return_anchor: Node2D
 var bounds := Rect2(45, 140, 990, 670)
 var targets: Array[Dictionary] = []
 var swords: Array[Sword] = []
@@ -163,7 +165,7 @@ func release_charge() -> void:
 	skill_time = 0.0
 	for i in range(swords.size()):
 		var s := swords[i]
-		s.angle = float(i) / swords.size() * TAU
+		s.angle = float(i) / swords.size() * TAU + elapsed * 0.55
 		s.v = Vector2.from_angle(s.angle) * burst_speed
 		s.angular_speed = 0.0
 		s.cooldown = 0.0
@@ -191,6 +193,7 @@ func release_river() -> void:
 
 func recall() -> void:
 	if skill == Skill.NONE: return
+	if is_instance_valid(return_anchor): skill_center = return_anchor.position
 	skill = Skill.RETURN
 	skill_time = 0.0
 	focus = skill_center
@@ -205,6 +208,9 @@ func roll_blades() -> void:
 func _physics_process(delta: float) -> void:
 	if paused: return
 	elapsed += delta
+	if skill == Skill.RETURN and is_instance_valid(return_anchor):
+		skill_center = return_anchor.position
+		focus = skill_center
 	if skill != Skill.NONE:
 		skill_time += delta
 		if skill == Skill.RIVER: river_distance += river_speed * delta
@@ -238,13 +244,7 @@ func _step_skill(s: Sword, index: int, dt: float) -> void:
 	s.cooldown = maxf(0.0, s.cooldown - dt)
 	match skill:
 		Skill.CHARGE, Skill.RIVER_AIM:
-			var a := float(index) / swords.size() * TAU
-			var destination := skill_center + Vector2.from_angle(a) * (6.0 + 16.0 * sqrt(float(index) / swords.size()))
-			var desired := ((destination - s.p) * 6.0).limit_length(maxf(speed * 2.0, 900.0))
-			s.v = s.v.lerp(desired, 1.0 - exp(-dt * 9.0))
-			s.p += s.v * dt
-			if s.v.length() > 12: s.angle = s.v.angle()
-			else: s.angle = lerp_angle(s.angle, a if skill == Skill.CHARGE else skill_direction.angle(), 1.0 - exp(-dt * 5.0))
+			_step_charge_ring(s, index, dt)
 		Skill.BURST:
 			s.p += s.v * dt # Deliberately no arena boundary force.
 			_skill_hits(s, previous, s.p)
@@ -257,6 +257,10 @@ func _step_skill(s: Sword, index: int, dt: float) -> void:
 			var x := river_distance - float(pair) * spacing
 			var normal := skill_direction.orthogonal()
 			var entry := smoothstep(0.0, river_wavelength * 0.35, maxf(0.0, x))
+			if x <= 0.0:
+				_step_charge_ring(s, index, dt)
+				_step_roll(s, dt)
+				return
 			var destination := skill_center + skill_direction * maxf(x, 0.0) + normal * _river_lateral(index, x) * river_width * 0.5 * entry
 			var blend := 1.0 - exp(-dt * 16.0)
 			# Soft capture from the current position makes even a quick tap continuous.
@@ -277,6 +281,32 @@ func _step_skill(s: Sword, index: int, dt: float) -> void:
 			s.p += s.v * dt
 			if diff.length() < 170.0: s.returned = true
 	_step_roll(s, dt)
+
+func charge_orbit_center() -> Vector2:
+	# Player coordinates are at the feet; surround the torso, including the head.
+	return skill_center + (Vector2(0, -46) if is_instance_valid(return_anchor) else Vector2.ZERO)
+
+func _step_charge_ring(s: Sword, index: int, dt: float) -> void:
+	var center := charge_orbit_center()
+	var radius := maxf(charge_radius, 96.0)
+	var a := float(index) / swords.size() * TAU + elapsed * 0.55
+	var offset := s.p - center
+	var polar := offset.angle() if offset.length_squared() > 0.01 else a
+	# Approach a nearby point on the ring before rotating to the assigned slot,
+	# rather than taking a shortcut through the character to the opposite side.
+	var waypoint := polar + clampf(wrapf(a - polar, -PI, PI), -0.4, 0.4)
+	var destination := center + Vector2.from_angle(waypoint) * radius
+	var desired := ((destination - s.p) * 6.0).limit_length(maxf(speed * 2.0, 900.0))
+	s.v = s.v.lerp(desired, 1.0 - exp(-dt * 9.0))
+	s.p += s.v * dt
+	var separation := s.p - center
+	if separation.length() < 88.0:
+		var outward := separation.normalized() if separation.length_squared() > 0.01 else Vector2.from_angle(a)
+		s.p = center + outward * 88.0
+		s.v -= outward * minf(s.v.dot(outward), 0.0)
+		# Clear old history on ejection so no trail chord crosses the body.
+		s.samples = 0
+	s.angle = lerp_angle(s.angle, (s.p - center).angle(), 1.0 - exp(-dt * 7.0))
 
 func _river_lateral(index: int, distance: float) -> float:
 	var pair: int = index / 2
