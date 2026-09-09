@@ -82,17 +82,16 @@ local function side_layer(layer,st,d,wind,stride)
    rect(38,39,2,4,'shade');rect(39,43,2,3,'skinshade')
   end
  else
-  -- Rounded cranium, brow, nose, lips and chin occupy distinct pixel clusters.
+  -- All front-facing views share forehead y=13 and chin y=24.
+  -- A quiet, continuous profile: no eye, mouth or separate lip pixels.
   poly({{26,12},{28,9},{32,8},{36,9},{38,12},{38,17},{35,23},{33,26},{25,25},{24,17}},'hair')
-  poly({{32,13},{36,13},{37,16},{39,18},{39,19},{37,20},{38,22},{36,24},{33,23},{32,20}},'skinshade')
-  poly({{33,14},{36,14},{36,17},{38,18},{37,19},{36,20},{37,22},{35,23},{33,21}},'skin')
-  rect(35,16,2,1,'ink');px(37,21,'ink')
-  rect(30,17,2,3,'skinshade');px(31,18,'skin')
+  poly({{31,13},{36,13},{37,16},{38,18},{37,21},{35,24},{32,22}},'skinshade')
+  poly({{32,13},{35,13},{36,16},{37,18},{36,21},{35,23},{33,22}},'skin')
   poly({{26,13},{29,10},{33,10},{36,12},{34,14},{31,15},{29,24},{28,30},{25+wind,40},{23+wind,43},{25,29},{24,20}},'hair')
   poly({{26,16},{28,12},{31,11},{29,16},{27,29},{25+wind,38}},'shine')
   poly({{29,21},{31,22},{31,31},{33+wind,38},{30+wind,35},{28,29}},'dark')
   -- One temple lock leaves the cheek and neck readable.
-  poly({{32,13},{34,12},{33,16},{33,25},{32,28},{31,21}},'hair')
+  poly({{31,13},{33,12},{32,16},{32,24},{31,27},{30,21}},'hair')
  end
 end
 local atlas=Image(W*8,H*32,ColorMode.RGB)
@@ -182,22 +181,22 @@ for st=0,3 do for d=0,7 do
     -- Loose waist-length hair, separate tapered locks and restrained highlights.
     poly({{26,9},{31,6},{37,8},{40,17},{40,27},{44+wind,41},{40+wind,38},{37,28},{25,33},{22+wind,44},{22,31},{24,20}},'hair')
     if not back then
-     poly({{28+face,13},{35+face,12},{37+face,18},{35+face,24},{32+face,26},{28+face,22}},'skinshade')
-     poly({{29+face,13},{35+face,14},{35+face,20},{33+face,24},{30+face,22}},'skin')
-     if side then px(40,18,'skin');rect(35,17,3,1,'ink')
-     else rect(29+face,17,2,1,'ink');rect(34+face,17,2,1,'ink');px(33+face,21,'skinshade') end
-     poly({{25,11},{30,7},{37,9},{39,16},{34+face,12},{31+face,13},{27,20},{26,31},{24+wind,38},{25,22}},'hair')
-     poly({{34+face,11},{37+face,14},{38,28},{41+wind,35},{37,32},{35,23}},'hair')
      poly({{26,12},{30,9},{32,9},{28,14},{26,26}},'shine')
      poly({{37,18},{39,26},{42+wind,34},{40+wind,31}},'fold')
      px(31,8,'edge')
      if d==2 then
-      poly({{29,13},{35,13},{36,19},{34,23},{32,25},{29,22},{28,17}},'skinshade')
-      poly({{30,13},{34,13},{35,19},{33,23},{31,22},{29,18}},'skin')
-      rect(29,17,2,1,'ink');rect(34,17,2,1,'ink')
-      px(32,21,'skinshade')
-      poly({{28,11},{32,9},{31,13},{28,19},{27,28},{26,26}},'hair')
-      poly({{33,10},{36,12},{38,24},{37,28},{35,20},{34,14}},'hair')
+      poly({{29,13},{35,13},{36,18},{35,21},{32,24},{29,22},{28,18}},'skinshade')
+      poly({{30,13},{34,13},{35,18},{34,21},{32,23},{30,21},{29,18}},'skin')
+      poly({{28,11},{32,9},{31,13},{28,18},{27,28},{26,26}},'hair')
+      poly({{33,10},{36,12},{38,24},{37,28},{35,19},{34,13}},'hair')
+     else
+      -- SE / SW: a broader near cheek, short jaw, same vertical landmarks.
+      -- Keep the temple lock outside the face instead of cutting it in half.
+      poly({{30,13},{36,13},{38,17},{37,21},{34,24},{31,22},{29,18}},'skinshade')
+      poly({{32,13},{36,14},{37,17},{36,21},{34,23},{32,21},{31,17}},'skin')
+      poly({{27,11},{31,9},{35,10},{33,13},{30,15},{29,23},{27,30},{26,26}},'hair')
+      poly({{36,11},{38,13},{40,25},{41+wind,34},{38,30},{37,23},{38,17}},'hair')
+      poly({{27,14},{29,12},{30,12},{28,19},{27,25}},'shine')
      end
     else
      poly({{26,12},{31,8},{36,10},{39,21},{40+wind,37},{36+wind,46},{31,41},{26+wind,45},{25,30}},'hair')

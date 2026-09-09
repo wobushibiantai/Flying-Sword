@@ -32,4 +32,13 @@ for st in range(4):
     right=atlas.crop((0,st*640,64,st*640+80))
     left=atlas.crop((0,st*640+320,64,st*640+400))
     assert right.transpose(Image.Transpose.FLIP_LEFT_RIGHT).tobytes()!=left.tobytes(), 'Side clothing is only mirrored'
-print('ASSET_CHECK_OK: 32 animated rows, 256 unclipped frames, flight shoes fixed')
+skin_colors={(226,199,172,255),(183,151,129,255)}
+for state in range(4):
+    for frame in range(8):
+        heights=[]
+        for direction in range(5):
+            head=atlas.crop((frame*64,(state*8+direction)*80,(frame+1)*64,(state*8+direction)*80+24))
+            ys=[y for y in range(24) for x in range(64) if head.getpixel((x,y)) in skin_colors]
+            heights.append((min(ys),max(ys)))
+        assert len(set(heights))==1, ('Face heights differ',state,frame,heights)
+print('ASSET_CHECK_OK: 32 animated rows, 256 unclipped frames, flight shoes fixed, face heights aligned')
