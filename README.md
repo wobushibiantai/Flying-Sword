@@ -32,6 +32,8 @@ Godot 4.7.1 / GDScript / Compatibility。打开 `project.godot`，按 **F5**。�
 
 八方向均有待机、行走、抬袖施法与背手飞行序列，每组 8 帧，共 256 帧。起飞、巡航和降落使用独立背手姿态：侧面可见手臂向身后弯曲，背面双手在腰后交叠，双脚固定，只有头发和衣摆飘动。地面和升空角色共用 `player.tscn` 与同一贴图，`flying` 状态优先选用飞行序列并隐藏脚底地面阴影。
 
+按住 Q / E / V 时，角色始终随鼠标实时转向，站定时也立即更新。施法手臂按八方向区分侧伸、斜前伸、正面透视缩短与向后抬手，手势保持可见。左右飞行时前襟与内衬贴身不摆动，后摆朝背风方向展开并飘动；两侧沿各自飞行方向表现风向。
+
 资产由本机 **Aseprite Lua API** 实际生成：`art/generate_swordsman.lua` 使用 `Sprite`、`Image:putPixel`、`newCel` 与 `newTag` 绘制、分层和导出。可编辑源文件为 `assets/character/swordsman.aseprite`，含衣袍、袖口、头发三层与 32 个动画标签。运行时读取 `assets/character/swordsman.png`，不依赖 Aseprite 安装。
 
 图集每格 64×80，8 列、32 行；行序为 idle / walk / cast / fly，每组方向 E、SE、S、SW、W、NW、N、NE。待机帧时长 180 ms，其余 100 ms。`scripts/player.gd` 使用脚底锚点和 nearest 采样，原移动、技能与遮挡关系保持兼容。

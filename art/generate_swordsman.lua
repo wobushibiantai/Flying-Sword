@@ -34,6 +34,18 @@ local function side_layer(layer,st,d,wind,stride)
  if layer==1 then
   rect(28-sway,70,8,3,'ink');rect(28-sway,73,8,1,'shade')
   rect(34+sway,71,9,3,'ink');rect(34+sway,74,9,1,'shade')
+  if st==3 then
+   -- Wind comes from the facing direction (right in these local coordinates).
+   -- Front edge and lining cling to the legs; only the rear panels flap.
+   local tail=15+wind
+   poly({{28,24},{36,24},{38,43},{39,70},{35,72},{tail,68},{tail-2,61},{24,48}},'ink')
+   poly({{29,26},{35,26},{36,43},{37,70},{32,70},{tail+2,66},{tail+1,61},{26,47}},'robe')
+   poly({{33,43},{36,43},{37,70},{33,70}},left and 'white' or 'shade')
+   poly({{31,44},{33,45},{32,69},{tail+3,65},{25,53}},'dark')
+   poly({{27,49},{29,47},{25,58},{tail+2,63},{tail+4,60}},'fold')
+   poly({{24,55},{27,52},{tail+5,66},{tail+2,65}},'edge')
+   return
+  end
   poly({{28,24},{36,24},{39,42},{43+wind,69},{39,72},{22+wind,71},{26,47}},'ink')
   poly({{29,26},{35,26},{37,42},{41+wind,69},{24+wind,69},{28,45}},'robe')
   -- The overlapping front panel is broad on the left, tucked on the right.
@@ -56,7 +68,9 @@ local function side_layer(layer,st,d,wind,stride)
    poly({{33,27},{35,29},{32,35},{29,32}},'edge')
   end
   rect(28,40,10,3,'sash')
-  if left then
+  if st==3 then
+   poly({{29,41},{27,44},{20+wind,49},{22+wind,46}},'deep')
+  elseif left then
    poly({{36,41},{39,43},{39+wind,52},{37+wind,50}},'deep')
   else rect(29,40,3,2,'shade') end
   if st==3 then
@@ -92,6 +106,33 @@ local function side_layer(layer,st,d,wind,stride)
   poly({{29,21},{31,22},{31,31},{33+wind,38},{30+wind,35},{28,29}},'dark')
   -- One temple lock leaves the cheek and neck readable.
   poly({{31,13},{33,12},{32,16},{32,24},{31,27},{30,21}},'hair')
+end
+end
+local function cast_arm(d,t)
+ local lift=math.floor(math.sin(t)*1.2+0.5)
+ if d==2 then
+  -- Toward camera: foreshortened forearm and hand in front of the chest.
+  poly({{38,25},{42,28},{44,39},{40,45},{33,40},{34,34}},'ink')
+  poly({{38,28},{40,30},{42,38},{39,42},{35,38},{36,34}},'robe')
+  poly({{34,33},{38,34},{38,38},{34,37}},'white')
+  rect(33,35+lift,4,4,'skin');rect(34,39+lift,2,2,'skin')
+ elseif d==6 then
+  -- Away from camera: raised arm reaches above the shoulder, beside the head.
+  poly({{37,28},{41,30},{47,26},{48,19},{44,18},{41,24}},'ink')
+  poly({{39,28},{41,28},{45,25},{46,20},{44,20},{42,26}},'fold')
+  rect(43,19,4,3,'white');rect(44,15+lift,3,5,'skin')
+  rect(45,13+lift,2,3,'skin')
+ elseif d==5 or d==7 then
+  poly({{37,27},{42,29},{51,22},{50,17},{46,18},{40,24}},'ink')
+  poly({{39,27},{42,27},{49,22},{48,19},{46,20},{41,25}},'robe')
+  poly({{47,19},{50,17},{52,20},{49,23}},'white')
+  rect(50,16+lift,4,3,'skin');rect(53,14+lift,2,3,'skin')
+ else
+  -- SE / SW: forearm points diagonally forward and down, not horizontally.
+  poly({{37,25},{41,27},{46,32},{53,34},{52,40},{44,44},{39,36}},'ink')
+  poly({{38,28},{41,29},{45,34},{51,36},{49,40},{44,41},{41,34}},'robe')
+  poly({{49,34},{53,35},{53,39},{49,38}},'white')
+  rect(53,36+lift,4,3,'skin');rect(56,38+lift,2,2,'skin')
  end
 end
 local atlas=Image(W*8,H*32,ColorMode.RGB)
@@ -163,12 +204,7 @@ for st=0,3 do for d=0,7 do
     poly({{20+wind,42},{23+wind,43},{22+wind,50},{18+wind,47}},'shade')
     rect(21+wind,40,3,5,'skin')
     if st==2 then
-     local lift=math.floor(math.sin(t)*1.2+0.5)
-     poly({{37,24},{43,27},{52,25+lift},{53,31+lift},{49,43},{42,40},{38,32}},'ink')
-     poly({{38,26},{44,29},{51,27+lift},{51,32+lift},{48,40},{43,38}},'robe')
-     poly({{48,28+lift},{51,26+lift},{53,29+lift},{49,35}},'white')
-     rect(52,25+lift,5,3,'skin');rect(55,24+lift,3,1,'skin')
-     poly({{40,30},{46,34},{48,38},{44,36}},'fold')
+     -- Draw the directional casting arm after hair so the gesture stays legible.
     else
      poly({{37,24},{41,27},{44,39},{46-wind,48},{40-wind,52},{36,38}},'ink')
      poly({{38,26},{40,29},{42,39},{44-wind,47},{40-wind,49},{38,38}},'robe')
@@ -210,6 +246,7 @@ for st=0,3 do for d=0,7 do
      end
     end
    end
+   if layer==3 and st==2 and not side then cast_arm(d,t) end
    spr:newCel(layers[layer],frame,img,Point(0,0))
    merged:drawImage(img,Point(0,0))
   end

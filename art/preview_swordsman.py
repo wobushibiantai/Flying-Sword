@@ -38,7 +38,14 @@ for state in range(4):
         heights=[]
         for direction in range(5):
             head=atlas.crop((frame*64,(state*8+direction)*80,(frame+1)*64,(state*8+direction)*80+24))
-            ys=[y for y in range(24) for x in range(64) if head.getpixel((x,y)) in skin_colors]
+            ys=[y for y in range(24) for x in range(23,41) if head.getpixel((x,y)) in skin_colors]
             heights.append((min(ys),max(ys)))
         assert len(set(heights))==1, ('Face heights differ',state,frame,heights)
+for d in (0,4):
+    cells=[atlas.crop((f*64,(24+d)*80,(f+1)*64,(25+d)*80)) for f in range(8)]
+    if d==4: cells=[im.transpose(Image.Transpose.FLIP_LEFT_RIGHT) for im in cells]
+    fronts=[im.crop((33,44,43,70)).tobytes() for im in cells]
+    backs=[im.crop((8,50,29,70)).tobytes() for im in cells]
+    assert len(set(fronts))==1, 'Flight front robe must stay fitted'
+    assert len(set(backs))>=3, 'Flight rear robe should flutter'
 print('ASSET_CHECK_OK: 32 animated rows, 256 unclipped frames, flight shoes fixed, face heights aligned')

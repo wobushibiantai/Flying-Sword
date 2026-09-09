@@ -33,6 +33,8 @@ var show_background: bool = true
 var player: Swordsman
 var follow_player: bool = true
 var follow_toggle: CheckButton
+var pointer_viewport := Vector2.ZERO
+var pointer_received := false
 
 func _ready() -> void:
 	var system_font := SystemFont.new()
@@ -78,7 +80,7 @@ func _process(delta: float) -> void:
 				target.respawn = maxf(0, target.respawn - delta)
 				if target.respawn == 0:
 					target.hp = 16
-	var mouse := get_local_mouse_position()
+	var mouse := _pointer_position()
 	if swarm.skill == SwordSwarm.Skill.RIVER_AIM and capture_kind.is_empty():
 		swarm.aim_river(mouse)
 	if swarm.bounds.has_point(mouse) and not placing and swarm.skill == SwordSwarm.Skill.NONE:
@@ -109,12 +111,16 @@ func _process(delta: float) -> void:
 func _sync_player() -> void:
 	if not is_instance_valid(swarm): return
 	player.paused = swarm.paused
-	player.casting = swarm.skill in [SwordSwarm.Skill.CHARGE, SwordSwarm.Skill.RIVER_AIM, SwordSwarm.Skill.RIVER]
-	player.aim = get_local_mouse_position() - player.position
+	player.update_cast_pose(swarm.skill in [SwordSwarm.Skill.CHARGE, SwordSwarm.Skill.RIVER_AIM, SwordSwarm.Skill.RIVER], _pointer_position())
 	if swarm.skill in [SwordSwarm.Skill.CHARGE, SwordSwarm.Skill.RIVER_AIM]:
 		swarm.skill_center = player.position
 	if swarm.skill == SwordSwarm.Skill.NONE and (swarm.mode == SwordSwarm.Mode.HUNT or (swarm.mode == SwordSwarm.Mode.ORBIT and follow_player)):
 		swarm.focus = player.position
+
+func _pointer_position() -> Vector2:
+	if pointer_received:
+		return get_global_transform_with_canvas().affine_inverse() * pointer_viewport
+	return get_local_mouse_position()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
@@ -138,6 +144,10 @@ func _unhandled_input(event: InputEvent) -> void:
 					break
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion or event is InputEventMouseButton:
+		pointer_viewport = event.position
+		pointer_received = true
+		_sync_player()
 	if event is InputEventKey and event.keycode in [KEY_W, KEY_A, KEY_S, KEY_D, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT]:
 		# Movement polling still sees these keys; stop UI navigation consuming arrows.
 		get_viewport().set_input_as_handled()

@@ -51,6 +51,14 @@ func _draw() -> void:
 func animation_state_index() -> int:
 	return 3 if flying else (2 if casting else (1 if walking else 0))
 
+func update_cast_pose(active: bool, target: Vector2) -> void:
+	casting = active
+	aim = target - position
+	# Refresh immediately even while stationary, independently of movement ticks.
+	if casting and not paused and aim.length_squared() > 0.01:
+		facing = posmod(roundi(aim.angle() / (PI / 4.0)), 8)
+	queue_redraw()
+
 func draw_ellipse_shadow() -> void:
 	draw_set_transform(Vector2(0, 1), 0, Vector2(1, 0.28))
 	draw_circle(Vector2.ZERO, 15, Color(0, 0, 0, 0.20))
