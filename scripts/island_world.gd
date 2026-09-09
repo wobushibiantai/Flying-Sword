@@ -114,6 +114,7 @@ func take_off() -> void:
 	flight_start = flight_position
 	ascent_avatar_start = project_to_screen(flight_position)
 	flight_avatar.show()
+	flight_avatar.flight_moving = true
 	selected_region = current_region
 	_set_state(State.ASCENDING)
 
@@ -223,6 +224,7 @@ func advance(delta: float) -> void:
 	cloud_material.set_shader_parameter("cover",cover)
 	cloud_material.set_shader_parameter("drift",clock)
 	var flight_delta := flight_position - previous_flight
+	flight_avatar.flight_moving = state in [State.ASCENDING, State.DESCENDING] or flight_delta.length_squared() > 0.01
 	if flight_delta.length_squared() > 0.01:
 		flight_avatar.facing = posmod(roundi(flight_delta.angle()/(PI/4.0)),8)
 	elif state == State.ASCENDING: flight_avatar.facing = 6

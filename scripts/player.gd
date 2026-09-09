@@ -8,6 +8,7 @@ var paused: bool = false
 var input_enabled: bool = true
 var casting: bool = false
 var flying: bool = false
+var flight_moving: bool = true
 var aim := Vector2.RIGHT
 var facing: int = 2
 var walking: bool = false
@@ -49,7 +50,8 @@ func _draw() -> void:
 	draw_texture_rect_region(ATLAS, Rect2(-44.8, -103.6, 89.6, 112), region)
 
 func animation_state_index() -> int:
-	return 3 if flying else (2 if casting else (1 if walking else 0))
+	if flying: return 3 if flight_moving else 4
+	return 2 if casting else (1 if walking else 0)
 
 func update_cast_pose(active: bool, target: Vector2) -> void:
 	casting = active

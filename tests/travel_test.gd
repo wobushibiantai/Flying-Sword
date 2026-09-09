@@ -29,11 +29,21 @@ func _run() -> void:
 		check(world.cloud_material.get_shader_parameter("cover") > 0.5,"Ascent crosses dense cloud layer")
 		world.advance(3.0)
 		check(world.state == world.State.SKY,"Reach high-altitude selection")
-		check(not world.flight_avatar.walking and world.flight_avatar.animation_state_index() == 3,"Sky flight never plays walking")
+		world.advance(0.01)
+		check(not world.flight_avatar.walking and world.flight_avatar.animation_state_index() == 4,"Stopped sky avatar uses hovering cloth")
+		for action in ["ui_right", "ui_left"]:
+			Input.action_press(action)
+			world.advance(0.05)
+			check(world.flight_avatar.animation_state_index() == 3,"Manual sideways flight uses wind cloth")
+			Input.action_release(action)
+			world.advance(0.05)
+			check(world.flight_avatar.animation_state_index() == 4,"Releasing movement restores hover cloth")
 		var choose := InputEventKey.new()
 		choose.keycode = KEY_1 + destination
 		choose.pressed = true
 		world._input(choose)
+		world.advance(0.1)
+		check(world.flight_avatar.animation_state_index() == 3,"Cruising switches to wind-blown cloth")
 		world.advance(1.4)
 		check(world.state == world.State.SKY,"Cruise arrives before landing")
 		check(world.flight_position.distance_to(world.OFFSETS[destination]+Vector2(520,445)) < 1,"Flight arrives at selected island")
