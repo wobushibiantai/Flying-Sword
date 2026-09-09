@@ -7,6 +7,7 @@ var movement_bounds := Rect2(50, 115, 985, 725)
 var paused: bool = false
 var input_enabled: bool = true
 var casting: bool = false
+var flying: bool = false
 var aim := Vector2.RIGHT
 var facing: int = 2
 var walking: bool = false
@@ -39,13 +40,16 @@ func step_movement(direction: Vector2, delta: float) -> void:
 
 func _draw() -> void:
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	draw_ellipse_shadow()
-	var state_index := 2 if casting else (1 if walking else 0)
+	if not flying: draw_ellipse_shadow()
+	var state_index := animation_state_index()
 	var fps := 10.0 if state_index > 0 else (1.0 / 0.18)
 	var frame := posmod(int(animation_time * fps), 8)
 	var region := Rect2(frame * 64, (state_index * 8 + facing) * 80, 64, 80)
 	# Foot pivot stays fixed; sprite height fits the existing charge-ring clearance.
 	draw_texture_rect_region(ATLAS, Rect2(-44.8, -103.6, 89.6, 112), region)
+
+func animation_state_index() -> int:
+	return 3 if flying else (2 if casting else (1 if walking else 0))
 
 func draw_ellipse_shadow() -> void:
 	draw_set_transform(Vector2(0, 1), 0, Vector2(1, 0.28))

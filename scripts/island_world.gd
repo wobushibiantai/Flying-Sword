@@ -75,6 +75,7 @@ func _build_ui() -> void:
 	sky_ui.add_child(flight_avatar)
 	flight_avatar.set_physics_process(false)
 	flight_avatar.visible = false
+	flight_avatar.flying = true
 	var mount := Polygon2D.new()
 	mount.polygon = PackedVector2Array([Vector2(-42,8),Vector2(35,5),Vector2(49,8),Vector2(34,11),Vector2(-42,11)])
 	mount.color = Color("d8edac")
@@ -226,7 +227,7 @@ func advance(delta: float) -> void:
 		flight_avatar.facing = posmod(roundi(flight_delta.angle()/(PI/4.0)),8)
 	elif state == State.ASCENDING: flight_avatar.facing = 6
 	elif state == State.DESCENDING: flight_avatar.facing = 2
-	flight_avatar.walking = state != State.GROUND
+	flight_avatar.walking = false
 	flight_avatar.animation_time = clock
 	flight_avatar.queue_redraw()
 	_update_ui()

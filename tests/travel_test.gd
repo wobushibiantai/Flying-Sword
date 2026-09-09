@@ -21,6 +21,7 @@ func _run() -> void:
 	for destination in [1,2,0]:
 		world.take_off()
 		check(world.state == world.State.ASCENDING,"Takeoff begins")
+		check(world.flight_avatar.flying and world.flight_avatar.animation_state_index() == 3,"Takeoff uses hands-behind-back flight pose")
 		check(ground.swarm.paused and not ground.player.input_enabled,"Combat frozen during travel")
 		check(not ground.is_processing_input(),"Ground hotkeys disabled in sky")
 		world.advance(1.5)
@@ -28,6 +29,7 @@ func _run() -> void:
 		check(world.cloud_material.get_shader_parameter("cover") > 0.5,"Ascent crosses dense cloud layer")
 		world.advance(3.0)
 		check(world.state == world.State.SKY,"Reach high-altitude selection")
+		check(not world.flight_avatar.walking and world.flight_avatar.animation_state_index() == 3,"Sky flight never plays walking")
 		var choose := InputEventKey.new()
 		choose.keycode = KEY_1 + destination
 		choose.pressed = true

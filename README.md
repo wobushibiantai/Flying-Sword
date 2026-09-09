@@ -28,11 +28,13 @@ Godot 4.7.1 / GDScript / Compatibility。打开 `project.godot`，按 **F5**。�
 
 ## 可控主角
 
-主角已替换为参考设定图的长黑发、黑灰宽袖外袍、象牙白交领与长内衫、灰蓝腰带和布鞋，使用较修长的成人比例。保留视频式有限色板和清晰像素边缘。八方向均有待机、行走与抬袖施法序列，每组 8 帧，共 192 帧；发丝、袖口、衣摆与步伐随动画变化。地面和升空角色共用 `player.tscn` 与同一贴图，空中使用行走的飘动帧。
+主角使用参考设定图的长黑发、黑灰宽袖外袍、象牙白交领与长内衫、灰蓝腰带和布鞋，保持修长成人比例、有限色板和清晰像素边缘。左右侧面独立绘制侧脸与肩臂结构，衣襟、衬里和腰带在两侧呈现不同的遮盖关系；袖口下露出手掌，近侧手臂与躯干有明确分界。
 
-资产由本机 **Aseprite Lua API** 实际生成：`art/generate_swordsman.lua` 使用 `Sprite`、`Image:putPixel`、`newCel` 与 `newTag` 绘制、分层和导出。可编辑源文件为 `assets/character/swordsman.aseprite`，含衣袍、袖口、头发三层与 24 个动画标签。运行时读取 `assets/character/swordsman.png`，不依赖 Aseprite 安装。
+八方向均有待机、行走、抬袖施法与背手飞行序列，每组 8 帧，共 256 帧。起飞、巡航和降落使用独立背手姿态：侧面可见手臂向身后弯曲，背面双手在腰后交叠，双脚固定，只有头发和衣摆飘动。地面和升空角色共用 `player.tscn` 与同一贴图，`flying` 状态优先选用飞行序列并隐藏脚底地面阴影。
 
-图集每格 64×80，8 列、24 行；行序为 idle / walk / cast，每组方向 E、SE、S、SW、W、NW、N、NE。待机帧时长 180 ms，行走和施法 100 ms。`scripts/player.gd` 使用脚底锚点和 nearest 采样，原移动、技能与遮挡关系保持兼容。
+资产由本机 **Aseprite Lua API** 实际生成：`art/generate_swordsman.lua` 使用 `Sprite`、`Image:putPixel`、`newCel` 与 `newTag` 绘制、分层和导出。可编辑源文件为 `assets/character/swordsman.aseprite`，含衣袍、袖口、头发三层与 32 个动画标签。运行时读取 `assets/character/swordsman.png`，不依赖 Aseprite 安装。
+
+图集每格 64×80，8 列、32 行；行序为 idle / walk / cast / fly，每组方向 E、SE、S、SW、W、NW、N、NE。待机帧时长 180 ms，其余 100 ms。`scripts/player.gd` 使用脚底锚点和 nearest 采样，原移动、技能与遮挡关系保持兼容。
 
 在项目的上一层目录重新生成：
 
