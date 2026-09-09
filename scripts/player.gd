@@ -14,7 +14,15 @@ var facing: int = 2
 var walking: bool = false
 var animation_time: float = 0.0
 var velocity := Vector2.ZERO
-const ATLAS: Texture2D = preload("res://assets/character/swordsman.png")
+var skin: CharacterSkin
+
+func _ready() -> void:
+	get_node("/root/CharacterSkins").changed.connect(_refresh_skin)
+	_refresh_skin()
+
+func _refresh_skin() -> void:
+	skin = get_node("/root/CharacterSkins").current()
+	queue_redraw()
 
 func _physics_process(delta: float) -> void:
 	var direction := Vector2.ZERO
@@ -45,9 +53,11 @@ func _draw() -> void:
 	var state_index := animation_state_index()
 	var fps := 10.0 if state_index > 0 else (1.0 / 0.18)
 	var frame := posmod(int(animation_time * fps), 8)
-	var region := Rect2(frame * 64, (state_index * 8 + facing) * 80, 64, 80)
+	if skin == null: return
+	var size := Vector2(skin.frame_size)
+	var region := Rect2(Vector2(frame, state_index * 8 + facing) * size, size)
 	# Foot pivot stays fixed; sprite height fits the existing charge-ring clearance.
-	draw_texture_rect_region(ATLAS, Rect2(-44.8, -103.6, 89.6, 112), region)
+	draw_texture_rect_region(skin.atlas, Rect2(-skin.foot_pivot * skin.display_scale, size * skin.display_scale), region)
 
 func animation_state_index() -> int:
 	if flying: return 3 if flight_moving else 4

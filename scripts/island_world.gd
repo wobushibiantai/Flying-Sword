@@ -251,6 +251,7 @@ func _update_ui() -> void:
 	elif state == State.SKY: land_button.text = "请先靠近浮岛"
 
 func _input(event: InputEvent) -> void:
+	if CharacterSkins.handle_shortcut(event): return
 	if state == State.GROUND:
 		if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_TAB:
 			take_off()

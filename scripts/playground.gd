@@ -35,6 +35,9 @@ var follow_player: bool = true
 var follow_toggle: CheckButton
 var pointer_viewport := Vector2.ZERO
 var pointer_received := false
+var skin_picker: OptionButton
+var skin_status: Label
+var skin_dialog: FileDialog
 
 func _ready() -> void:
 	var system_font := SystemFont.new()
@@ -144,6 +147,7 @@ func _unhandled_input(event: InputEvent) -> void:
 					break
 
 func _input(event: InputEvent) -> void:
+	if CharacterSkins.handle_shortcut(event): return
 	if event is InputEventMouseMotion or event is InputEventMouseButton:
 		pointer_viewport = event.position
 		pointer_received = true
@@ -364,6 +368,7 @@ func _build_ui() -> void:
 	_slider(skills, "剑河前进速度", 100, 4000, 650, 50, func(v: float) -> void: swarm.river_speed = v)
 	_slider(skills, "剑河持续 / 秒", 1, 12, 4, 0.5, func(v: float) -> void: swarm.river_duration = v)
 	var arena := _tab(tabs, "角色 / 靶场")
+	_build_skin_controls(arena)
 	_slider(arena, "主角移动速度", 30, 900, 240, 10, func(v: float) -> void: player.move_speed = v)
 	follow_toggle = CheckButton.new()
 	follow_toggle.text = "环绕跟随主角"
@@ -384,6 +389,36 @@ func _build_ui() -> void:
 	pause_button = _button(root, "暂停演示    Space", _toggle_pause)
 	status_label = _label(root, "", 10, MUTED)
 	perf_label = _label(root, "", 10, MUTED)
+
+func _build_skin_controls(parent: Control) -> void:
+	_label(parent, "角色素材 · F2 快速切换", 14, ACCENT)
+	skin_picker = OptionButton.new()
+	skin_picker.add_theme_font_override("font", font)
+	skin_picker.add_theme_font_size_override("font_size", 14)
+	parent.add_child(skin_picker)
+	skin_picker.item_selected.connect(CharacterSkins.select)
+	CharacterSkins.changed.connect(_sync_skin_picker)
+	_sync_skin_picker()
+	skin_dialog = FileDialog.new()
+	skin_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	skin_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	skin_dialog.filters = PackedStringArray(["*.png ; 角色图集 PNG"])
+	skin_dialog.title = "选择角色图集（8 列 × 40 行）"
+	parent.add_child(skin_dialog)
+	skin_dialog.file_selected.connect(func(path: String) -> void:
+		var error := CharacterSkins.load_external(path)
+		skin_status.text = "已载入；修改 PNG 后可点重新加载" if error.is_empty() else error)
+	_button(parent, "载入外部 PNG 图集…", func() -> void: skin_dialog.popup_centered(Vector2i(850, 550)))
+	_button(parent, "重新加载外部图集", func() -> void:
+		var error := CharacterSkins.reload_external()
+		skin_status.text = "图集已刷新" if error.is_empty() else error)
+	skin_status = _label(parent, "切换后地面与御剑角色同步更新", 12, MUTED)
+	skin_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+func _sync_skin_picker() -> void:
+	skin_picker.clear()
+	for item in CharacterSkins.skins: skin_picker.add_item(item.display_name)
+	skin_picker.select(CharacterSkins.selected)
 
 func _tab(tabs: TabContainer, title: String) -> VBoxContainer:
 	var scroll := ScrollContainer.new()

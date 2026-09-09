@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="CharacterSkin" load_steps=3 format=3]
+[ext_resource type="Script" path="res://scripts/character_skin.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/character/traveler/swordsman.png" id="2"]
+[resource]
+script = ExtResource("1")
+display_name = "新版 · 墨衣行者"
+atlas = ExtResource("2")

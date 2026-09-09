@@ -2,6 +2,7 @@
 -- Hand-authored pixel clusters. Reference: supplied black/ivory swordsman sheet.
 local out=app.params.out or 'sword/assets/character'
 local W,H=64,80
+local custom_renderer=app.params.renderer and dofile(app.params.renderer) or nil
 local spr=Sprite(W,H,ColorMode.RGB)
 local layers={spr.layers[1],spr:newLayer(),spr:newLayer()}
 layers[1].name='Robe and shoes'; layers[2].name='Sleeves and collar'; layers[3].name='Hair and face'
@@ -170,7 +171,9 @@ for row_st=0,4 do for d=0,7 do
   local merged=Image(W,H,ColorMode.RGB)
   for layer=1,3 do
    img=Image(W,H,ColorMode.RGB)
-   if side then
+   if custom_renderer then
+    custom_renderer(layer,row_st,d,wind,stride,poly,rect,px)
+   elseif side then
     side_layer(layer,row_st,d,wind,stride)
    elseif layer==1 then
     -- Narrow adult proportions: head 11 px, full silhouette 68 px.
@@ -258,7 +261,7 @@ for row_st=0,4 do for d=0,7 do
      end
     end
    end
-   if layer==3 and st==2 and not side then cast_arm(d,t) end
+   if not custom_renderer and layer==3 and st==2 and not side then cast_arm(d,t) end
    spr:newCel(layers[layer],frame,img,Point(0,0))
    merged:drawImage(img,Point(0,0))
   end
