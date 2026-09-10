@@ -13,12 +13,23 @@ func run() -> void:
 	var hd: CharacterSkin = load("res://assets/character/hd.tres")
 	check(hd.validation_error().is_empty(), "HD resource validates all five pages")
 	check(hd.frame_size == Vector2i(384,640), "Native HD frame size preserved")
+	check(hd.frames_per_direction == 24 and hd.animation_fps == 30.0, "HD actions have 24 frames at 30 FPS")
 	for action in range(5):
 		var page := hd.texture_for_state(action)
+		var regions := {}
 		for direction in range(8):
-			for frame in range(8):
+			for frame in range(hd.frames_per_direction):
 				var r := hd.frame_region(action,direction,frame)
 				check(Rect2(Vector2.ZERO,page.get_size()).encloses(r),"Every HD frame fits its action page")
+				check(not regions.has(r.position), "Packed directions never overlap or repeat frames")
+				regions[r.position] = true
+		var fps := hd.idle_fps if action == 0 else hd.animation_fps
+		for frame in range(24):
+			check(hd.frame_at_time(action, (frame+0.5)/fps) == frame, "Every in-between frame plays in order")
+		check(hd.frame_at_time(action,24.01/fps) == 0,"Loop wraps directly from frame 23 to frame 0")
+	check(is_equal_approx(24.0/hd.animation_fps,0.8),"Added frames retain the original action cycle duration")
+	var classic: CharacterSkin = load("res://assets/character/classic.tres")
+	check(classic.validation_error().is_empty() and classic.frame_at_time(1,0.75) == 7,"Classic eight-frame playback stays compatible")
 	var world = load("res://world.tscn").instantiate()
 	root.add_child(world)
 	world.set_process(false)
@@ -43,5 +54,5 @@ func run() -> void:
 		await RenderingServer.frame_post_draw
 		world.ground.detail_window.get_texture().get_image().save_png(ProjectSettings.globalize_path("res://../reference/hd-in-game-preview.png"))
 	world.ground.detail_window.hide()
-	if failures==0: print("HD_CHARACTER_OK 384x640 pages5 frames320 synchronized preview=ok")
+	if failures==0: print("HD_CHARACTER_OK 384x640 pages5 frames960 24_per_direction 30fps packing=ok loop=ok preview=ok")
 	quit(0 if failures==0 else 1)

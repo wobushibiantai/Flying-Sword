@@ -12,7 +12,7 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO,size), Color("596263"))
 	if skin == null: return
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	var frame := int(clock * (1.0/0.18 if action==0 else 10.0)) % 8
+	var frame := skin.frame_at_time(action, clock)
 	var source := skin.frame_region(action,direction,frame)
 	var texture := skin.texture_for_state(action)
 	# Full figure at native pixels when it fits; older skins are enlarged.

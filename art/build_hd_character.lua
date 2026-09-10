@@ -2,6 +2,7 @@
 -- Usage: aseprite --batch --script-param out=sword/assets/character/hd --script sword/art/build_hd_character.lua
 local out=app.params.out or 'sword/assets/character/hd'
 local FW,FH=384,640
+local COUNT,COLUMNS=24,16
 local rgba=app.pixelColor
 local dirs={'e','se','s','sw','w','nw','n','ne'}
 local function extract(path)
@@ -76,30 +77,53 @@ end
 local idle=extract(out..'/source/idle.png')
 local sources={idle,extract(out..'/source/walk.png'),extract(out..'/source/cast.png'),extract(out..'/source/fly.png')}
 local names={'idle','walk','cast','fly','hover'}
+local function smooth(a,b,v)
+ local k=math.max(0,math.min(1,(v-a)/(b-a)))
+ return k*k*(3-2*k)
+end
+-- Continuous deformation of each action's own key pose. Inserting an unrelated
+-- idle drawing in the middle of the walk cycle caused large silhouette jumps.
+-- No cross-fades: sample a single source pixel so fine texture stays crisp.
 for state=1,5 do
  local spr=Sprite(FW,FH,ColorMode.RGB)
  spr.layers[1].name='Detailed pixels'
- local page=Image(FW*8,FH*8,ColorMode.RGB)
+ local page=Image(FW*COLUMNS,FH*math.ceil(COUNT*8/COLUMNS),ColorMode.RGB)
  local srcs=sources[math.min(state,4)]
- for d=1,8 do for f=0,7 do
-  local frame=(d-1)*8+f+1
+ for d=1,8 do for f=0,COUNT-1 do
+  local frame=(d-1)*COUNT+f+1
   if frame>1 then spr:newEmptyFrame() end
-  spr.frames[frame].duration=state==1 and 0.18 or 0.1
+  spr.frames[frame].duration=state==1 and 0.06 or 1/30
   local src=srcs[d]
-  -- Generated key poses, with restrained pixel-preserving cloth/hair motion.
-  -- Walk passes through neutral stance twice; no blurred frame blending.
-  if state==2 and (f==0 or f==4) then src=idle[d] end
   local img=Image(FW,FH,ColorMode.RGB)
-  local t=f/8*math.pi*2
+  local t=f/COUNT*math.pi*2
+  local stride=math.sin(t)
+  local side=math.abs(math.cos((d-1)*math.pi/4))
   for y=0,FH-1 do
-   local lower=math.max(0,math.min(1,(y-290)/290))
-   local wave=math.sin(t+lower*2)
-   local shift=math.floor(wave*lower*(state==4 and 7 or 3)+0.5)
-   local bob=state==2 and math.floor(math.sin(t*2)*2+0.5) or 0
+   local lower=smooth(290,585,y)
+   local legs=smooth(440,585,y)
+   local upper=1-smooth(380,590,y)
+   local hair=smooth(65,160,y)*(1-smooth(280,410,y))
+   local sleeves=smooth(155,240,y)*(1-smooth(360,440,y))
+   local wave=math.sin(t-lower*1.8)
+   local cloth=wave*lower*(state==4 and 9 or (state==2 and 7 or 5))
+   local bob=(state==2 and (1-math.cos(t*2))*2.5 or math.sin(t)*1.5)*upper
    for x=0,FW-1 do
-    local sx=x-shift
-    if state==4 and ((d==1 and x>FW/2) or (d==5 and x<FW/2)) then sx=x end
-    local sy=y-bob
+    local lateral=math.max(-1,math.min(1,(x-FW/2)/45))
+    local outer=smooth(38,112,math.abs(x-FW/2))
+    local shift=cloth
+    -- A travelling side view pins the upwind front; rear hair/hem trail behind.
+    if state==4 and (d==1 or d==5) then
+     shift=shift*(1-smooth(-22,35,(x-FW/2)*(d==1 and 1 or -1)))
+    end
+    shift=shift+math.sin(t-hair*1.2)*hair*outer*(state==4 and 4 or 2.5)
+    local lift=0
+    if state==2 then
+     shift=shift+stride*legs*lateral*(8+8*side)
+     shift=shift-stride*sleeves*lateral*outer*5
+     lift=math.max(0,stride*lateral)*legs*9
+    end
+    local sx=math.floor(x-shift+0.5)
+    local sy=math.floor(y-bob+lift+0.5)
     if sx>=0 and sx<FW and sy>=0 and sy<FH then
      local c=src:getPixel(sx,sy)
      if rgba.rgbaA(c)>0 then img:putPixel(x,y,c) end
@@ -107,12 +131,12 @@ for state=1,5 do
    end
   end
   spr:newCel(spr.layers[1],frame,img,Point(0,0))
-  page:drawImage(img,Point(f*FW,(d-1)*FH))
+  page:drawImage(img,Point(((frame-1)%COLUMNS)*FW,math.floor((frame-1)/COLUMNS)*FH))
  end
-  local tag=spr:newTag((d-1)*8+1,d*8);tag.name=names[state]..'_'..dirs[d]
+  local tag=spr:newTag((d-1)*COUNT+1,d*COUNT);tag.name=names[state]..'_'..dirs[d]
  end
  spr:saveAs(out..'/'..names[state]..'.aseprite')
  page:saveAs(out..'/'..names[state]..'.png')
  spr:close()
- print('HD_PAGE_OK '..names[state]..' frame='..FW..'x'..FH..' frames=64')
+ print('HD_PAGE_OK '..names[state]..' frame='..FW..'x'..FH..' frames='..COUNT*8)
 end

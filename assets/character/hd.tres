@@ -12,3 +12,7 @@ action_atlases = Array[Texture2D]([ExtResource("2"), ExtResource("3"), ExtResour
 frame_size = Vector2i(384, 640)
 foot_pivot = Vector2(192, 600)
 display_scale = 0.16
+frames_per_direction = 24
+atlas_columns = 16
+animation_fps = 30.0
+idle_fps = 16.6666667

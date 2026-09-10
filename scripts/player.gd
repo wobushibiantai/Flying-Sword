@@ -51,9 +51,8 @@ func _draw() -> void:
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	if not flying: draw_ellipse_shadow()
 	var state_index := animation_state_index()
-	var fps := 10.0 if state_index > 0 else (1.0 / 0.18)
-	var frame := posmod(int(animation_time * fps), 8)
 	if skin == null: return
+	var frame := skin.frame_at_time(state_index, animation_time)
 	var size := Vector2(skin.frame_size)
 	var region := skin.frame_region(state_index, facing, frame)
 	# Foot pivot stays fixed; sprite height fits the existing charge-ring clearance.
