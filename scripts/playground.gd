@@ -38,6 +38,8 @@ var pointer_received := false
 var skin_picker: OptionButton
 var skin_status: Label
 var skin_dialog: FileDialog
+var detail_window: Window
+var detail_canvas: Control
 
 func _ready() -> void:
 	var system_font := SystemFont.new()
@@ -412,6 +414,7 @@ func _build_skin_controls(parent: Control) -> void:
 	_button(parent, "重新加载外部图集", func() -> void:
 		var error := CharacterSkins.reload_external()
 		skin_status.text = "图集已刷新" if error.is_empty() else error)
+	_button(parent, "放大查看素材 / 动作", _open_skin_detail)
 	skin_status = _label(parent, "切换后地面与御剑角色同步更新", 12, MUTED)
 	skin_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
@@ -419,6 +422,37 @@ func _sync_skin_picker() -> void:
 	skin_picker.clear()
 	for item in CharacterSkins.skins: skin_picker.add_item(item.display_name)
 	skin_picker.select(CharacterSkins.selected)
+	if is_instance_valid(detail_canvas): detail_canvas.skin = CharacterSkins.current()
+
+func _open_skin_detail() -> void:
+	if not is_instance_valid(detail_window):
+		detail_window = Window.new()
+		detail_window.title = "角色素材细节 · 全身与面部放大"
+		detail_window.size = Vector2i(940,760)
+		detail_window.close_requested.connect(detail_window.hide)
+		detail_window.window_input.connect(CharacterSkins.handle_shortcut)
+		add_child(detail_window)
+		var column := VBoxContainer.new()
+		column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		detail_window.add_child(column)
+		var actions := HBoxContainer.new()
+		column.add_child(actions)
+		var action_picker := OptionButton.new()
+		for title in ["待机", "行走", "施法", "移动飞行", "悬停"]: action_picker.add_item(title)
+		actions.add_child(action_picker)
+		var direction_picker := OptionButton.new()
+		for title in ["E 右", "SE 右前", "S 正面", "SW 左前", "W 左", "NW 左后", "N 背面", "NE 右后"]: direction_picker.add_item(title)
+		direction_picker.select(2)
+		actions.add_child(direction_picker)
+		_button(actions,"切换角色 · F2",CharacterSkins.next_skin)
+		detail_canvas = Control.new()
+		detail_canvas.set_script(preload("res://scripts/skin_detail_canvas.gd"))
+		detail_canvas.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		column.add_child(detail_canvas)
+		action_picker.item_selected.connect(func(index: int) -> void: detail_canvas.action=index)
+		direction_picker.item_selected.connect(func(index: int) -> void: detail_canvas.direction=index)
+	detail_canvas.skin = CharacterSkins.current()
+	detail_window.popup_centered()
 
 func _tab(tabs: TabContainer, title: String) -> VBoxContainer:
 	var scroll := ScrollContainer.new()

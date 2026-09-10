@@ -21,15 +21,17 @@ func _run() -> void:
 	var key := InputEventKey.new()
 	key.keycode = KEY_F2
 	key.pressed = true
-	for i in range(2):
+	var initial: int = wardrobe.selected
+	var count: int = wardrobe.skins.size()
+	for i in range(count):
 		root.push_input(key, true)
-		check(wardrobe.selected == (i + 1) % 2, "F2 switches exactly once")
+		check(wardrobe.selected == (initial+i+1) % count, "F2 switches exactly once")
 		check(player.skin == wardrobe.current() and world.flight_avatar.skin == player.skin, "Both avatars share selected skin")
 		check(player.position == position_before, "Swap keeps player position")
 	world.take_off()
 	world.advance(4.3)
 	root.push_input(key, true)
-	check(wardrobe.selected == 1 and world.flight_avatar.skin == wardrobe.current(), "F2 works in sky")
+	check(wardrobe.selected == (initial+1)%count and world.flight_avatar.skin == wardrobe.current(), "F2 works in sky")
 	world.ground.skin_picker.item_selected.emit(0)
 	check(wardrobe.selected == 0, "Dropdown switches skins")
 	var path := "user://skin_swap_test.png"

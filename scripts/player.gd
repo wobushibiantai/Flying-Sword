@@ -55,9 +55,9 @@ func _draw() -> void:
 	var frame := posmod(int(animation_time * fps), 8)
 	if skin == null: return
 	var size := Vector2(skin.frame_size)
-	var region := Rect2(Vector2(frame, state_index * 8 + facing) * size, size)
+	var region := skin.frame_region(state_index, facing, frame)
 	# Foot pivot stays fixed; sprite height fits the existing charge-ring clearance.
-	draw_texture_rect_region(skin.atlas, Rect2(-skin.foot_pivot * skin.display_scale, size * skin.display_scale), region)
+	draw_texture_rect_region(skin.texture_for_state(state_index), Rect2(-skin.foot_pivot * skin.display_scale, size * skin.display_scale), region)
 
 func animation_state_index() -> int:
 	if flying: return 3 if flight_moving else 4

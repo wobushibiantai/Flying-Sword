@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CharacterSkin" load_steps=7 format=3]
+[ext_resource type="Script" path="res://scripts/character_skin.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/character/hd/idle.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/character/hd/walk.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/character/hd/cast.png" id="4"]
+[ext_resource type="Texture2D" path="res://assets/character/hd/fly.png" id="5"]
+[ext_resource type="Texture2D" path="res://assets/character/hd/hover.png" id="6"]
+[resource]
+script = ExtResource("1")
+display_name = "高精度 · 墨衣剑仙"
+action_atlases = Array[Texture2D]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")])
+frame_size = Vector2i(384, 640)
+foot_pivot = Vector2(192, 600)
+display_scale = 0.16

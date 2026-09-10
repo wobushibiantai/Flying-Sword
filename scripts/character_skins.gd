@@ -2,8 +2,9 @@ extends Node
 signal changed
 var skins: Array[CharacterSkin] = [
 	preload("res://assets/character/traveler.tres"),
-	preload("res://assets/character/classic.tres")]
-var selected: int = 0
+	preload("res://assets/character/classic.tres"),
+	preload("res://assets/character/hd.tres")]
+var selected: int = 2
 var external_path: String = ""
 var external_index: int = -1
 
