@@ -4,12 +4,16 @@ var action: int = 0
 var direction: int = 2
 var clock: float = 0.0
 
+func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+
 func _process(delta: float) -> void:
 	clock += delta
 	queue_redraw()
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO,size), Color("596263"))
+	draw_texture_rect(preload("res://assets/pixel/combat/arena.png"), Rect2(Vector2.ZERO, size), true, Color(0.8, 0.85, 0.83))
 	if skin == null: return
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	var frame := skin.frame_at_time(action, clock)

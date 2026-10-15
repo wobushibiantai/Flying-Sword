@@ -1,13 +1,16 @@
 extends Node2D
-## Clouds below the island rims, distinct from the cloud layer crossed in flight.
+## Pixel cloud banks authored in Aseprite. Drawn below the islands and cached.
+const BANK = preload("res://assets/pixel/world/cloud_bank.png")
+
+func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+
 func _draw() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 41027
 	for i in range(58):
-		var center := Vector2(rng.randf_range(-2400,7700),rng.randf_range(-3600,6700))
-		for j in range(5):
-			var p := center + Vector2(j*190,rng.randf_range(-80,80))
-			draw_set_transform(p,0,Vector2(1,0.45))
-			draw_circle(Vector2.ZERO,rng.randf_range(210,440),Color(0.84,0.91,0.93,0.38))
-			draw_circle(Vector2(-30,-60),rng.randf_range(140,240),Color(0.96,0.98,0.97,0.32))
-	draw_set_transform(Vector2.ZERO)
+		var center := Vector2(rng.randf_range(-2400, 7700), rng.randf_range(-3600, 6700)).round()
+		var frame := i % 4
+		for j in range(2):
+			var p := center + Vector2(j * 260, rng.randi_range(-85, 85))
+			draw_texture_rect_region(BANK, Rect2(p - Vector2(350, 175), Vector2(700, 350)), Rect2(frame * 256, 0, 256, 128))

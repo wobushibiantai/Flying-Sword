@@ -8,7 +8,8 @@ const TRAIL_CAP := 128
 const SAMPLE_DT := 1.0 / 30.0
 const BLADE_SHADER = preload("res://shaders/blade.gdshader")
 const TRAIL_SHADER = preload("res://shaders/trail.gdshader")
-const BLADE_TEXTURE = preload("res://assets/blade.svg")
+const PIXELS = preload("res://scripts/pixel_assets.gd")
+const BLADE_TEXTURE = PIXELS.BLADE
 
 class Sword extends RefCounted:
 	var p := Vector2.ZERO
@@ -85,17 +86,18 @@ var render_trail_cap: int = 36
 
 func _ready() -> void:
 	rng.seed = 84932
-	trail_mesh = _make_multimesh(TRAIL_SHADER, true, null)
-	blade_mesh = _make_multimesh(BLADE_SHADER, false, BLADE_TEXTURE)
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	trail_mesh = _make_multimesh(TRAIL_SHADER, true, PIXELS.TRAIL)
+	blade_mesh = _make_multimesh(BLADE_SHADER, false, BLADE_TEXTURE, Vector2(48, 20))
 	_sync_count()
 
-func _make_multimesh(shader: Shader, colors: bool, texture: Texture2D) -> MultiMesh:
+func _make_multimesh(shader: Shader, colors: bool, texture: Texture2D, quad_size := Vector2.ONE) -> MultiMesh:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_2D
 	mm.use_colors = colors
 	mm.use_custom_data = true
 	var quad := QuadMesh.new()
-	quad.size = Vector2(48, 20) if texture != null else Vector2.ONE
+	quad.size = quad_size
 	mm.mesh = quad
 	mm.custom_aabb = AABB(Vector3(-10000, -10000, -1), Vector3(20000, 20000, 2))
 	var instance := MultiMeshInstance2D.new()
@@ -483,4 +485,6 @@ func _emit_sparks(p: Vector2, direction: Vector2) -> void:
 
 func _draw() -> void:
 	for spark in sparks:
-		draw_line(spark.p, spark.p - spark.v * 0.035, Color(0.85, 1.0, 0.62, clampf(spark.life * 3.0, 0, 1)), 1.5, true)
+		draw_set_transform(spark.p.round(), spark.v.angle())
+		draw_texture(PIXELS.SPARK, Vector2(-4, -4), Color(1, 1, 1, clampf(spark.life * 3.0, 0, 1)))
+	draw_set_transform(Vector2.ZERO)

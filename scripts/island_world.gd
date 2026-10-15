@@ -69,6 +69,7 @@ func _build_ui() -> void:
 	cloud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cloud_material = ShaderMaterial.new()
 	cloud_material.shader = preload("res://shaders/travel_clouds.gdshader")
+	cloud_material.set_shader_parameter("cloud_texture", preload("res://assets/pixel/world/cloud_veil.png"))
 	cloud.material = cloud_material
 	sky_ui.add_child(cloud)
 	flight_avatar = preload("res://player.tscn").instantiate()
@@ -76,9 +77,11 @@ func _build_ui() -> void:
 	flight_avatar.set_physics_process(false)
 	flight_avatar.visible = false
 	flight_avatar.flying = true
-	var mount := Polygon2D.new()
-	mount.polygon = PackedVector2Array([Vector2(-42,8),Vector2(35,5),Vector2(49,8),Vector2(34,11),Vector2(-42,11)])
-	mount.color = Color("d8edac")
+	var mount := Sprite2D.new()
+	mount.texture = preload("res://assets/pixel/combat/mount.png")
+	mount.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	mount.position = Vector2(2, 9)
+	mount.z_index = -1
 	flight_avatar.add_child(mount)
 	travel_button = _button(sky_ui, "御剑升空 · Tab", take_off)
 	travel_button.position = Vector2(24,24)

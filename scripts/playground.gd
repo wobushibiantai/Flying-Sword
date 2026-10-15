@@ -1,6 +1,8 @@
 extends Node2D
 
 const SwarmScript = preload("res://scripts/sword_swarm.gd")
+const PIXELS = preload("res://scripts/pixel_assets.gd")
+const PIXEL_UI = preload("res://scripts/pixel_ui.gd")
 const INK := Color("091719")
 const MUTED := Color("708c88")
 const TEXT := Color("dce8dc")
@@ -40,11 +42,15 @@ var skin_status: Label
 var skin_dialog: FileDialog
 var detail_window: Window
 var detail_canvas: Control
+var pixel_theme: Theme
 
 func _ready() -> void:
 	var system_font := SystemFont.new()
 	system_font.font_names = PackedStringArray(["Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC"])
 	font = system_font
+	pixel_theme = PIXEL_UI.make_theme(font)
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	player = preload("res://player.tscn").instantiate()
 	player.position = Vector2(520, 445)
 	player.z_index = 2
@@ -252,23 +258,20 @@ func _label(parent: Node, text: String, size: int, color: Color = TEXT) -> Label
 	parent.add_child(label)
 	return label
 
-func _style(color: Color, border: Color) -> StyleBoxFlat:
-	var box := StyleBoxFlat.new()
-	box.bg_color = color
-	box.border_color = border
-	box.set_border_width_all(1)
-	box.set_corner_radius_all(6)
-	box.content_margin_left = 16
-	box.content_margin_right = 16
-	box.content_margin_top = 8
-	box.content_margin_bottom = 8
-	return box
+func _style(color: Color, _border: Color) -> StyleBoxTexture:
+	return PIXEL_UI.button(color)
 
 func _button(parent: Node, text: String, action: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.custom_minimum_size.y = 40
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.theme = pixel_theme
+	button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	if text.contains("天女散花"): button.icon = PIXEL_UI.ICON_BLOOM
+	elif text.contains("剑河"): button.icon = PIXEL_UI.ICON_RIVER
+	elif text.contains("御剑升空"): button.icon = PIXEL_UI.ICON_RISE
+	elif text.contains("降落"): button.icon = PIXEL_UI.ICON_LAND
 	button.add_theme_font_override("font", font)
 	button.add_theme_font_size_override("font_size", 15)
 	button.add_theme_color_override("font_color", TEXT)
@@ -305,7 +308,9 @@ func _build_ui() -> void:
 	controls = PanelContainer.new()
 	controls.position = Vector2(1080, 16)
 	controls.size = Vector2(344, 868)
-	controls.add_theme_stylebox_override("panel", _style(Color("0d2023"), Color("2b403d")))
+	controls.theme = pixel_theme
+	controls.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	controls.add_theme_stylebox_override("panel", PIXEL_UI.panel())
 	layer.add_child(controls)
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 9)
@@ -406,6 +411,7 @@ func _build_skin_controls(parent: Control) -> void:
 	skin_dialog.access = FileDialog.ACCESS_FILESYSTEM
 	skin_dialog.filters = PackedStringArray(["*.png ; 角色图集 PNG"])
 	skin_dialog.title = "选择角色图集（8 列 × 40 行）"
+	skin_dialog.theme = pixel_theme
 	parent.add_child(skin_dialog)
 	skin_dialog.file_selected.connect(func(path: String) -> void:
 		var error := CharacterSkins.load_external(path)
@@ -428,6 +434,7 @@ func _open_skin_detail() -> void:
 	if not is_instance_valid(detail_window):
 		detail_window = Window.new()
 		detail_window.title = "角色素材细节 · 全身与面部放大"
+		detail_window.theme = pixel_theme
 		detail_window.size = Vector2i(940,760)
 		detail_window.close_requested.connect(detail_window.hide)
 		detail_window.window_input.connect(CharacterSkins.handle_shortcut)
@@ -466,7 +473,7 @@ func _tab(tabs: TabContainer, title: String) -> VBoxContainer:
 	return column
 
 func _draw() -> void:
-	if show_background: draw_rect(Rect2(0, 0, 1440, 900), INK)
+	if show_background: draw_texture_rect(PIXELS.ARENA, Rect2(0, 0, 1440, 900), true)
 	if not is_instance_valid(swarm):
 		return
 	if swarm.skill == SwordSwarm.Skill.RIVER_AIM:
@@ -475,45 +482,35 @@ func _draw() -> void:
 		var thickness := swarm.river_band_thickness if swarm.river_variant == 2 else 0.0
 		var normal := axis.orthogonal() * (swarm.river_width + thickness) * 0.5
 		var end := origin + axis * 2800.0
-		draw_colored_polygon(PackedVector2Array([origin - normal, end - normal, end + normal, origin + normal]), Color(0.35, 0.8, 0.65, 0.035))
-		draw_line(origin - normal, end - normal, Color(0.55, 0.9, 0.65, 0.3), 1, true)
-		draw_line(origin + normal, end + normal, Color(0.55, 0.9, 0.65, 0.3), 1, true)
-		draw_line(origin, end, Color(0.65, 0.95, 0.75, 0.2), 1, true)
+		draw_set_transform(origin - normal, axis.angle())
+		draw_texture_rect(PIXELS.AIM_FILL, Rect2(0, 0, 2800, (swarm.river_width + thickness)), true)
+		draw_set_transform(Vector2.ZERO)
+		_draw_aim_line(origin - normal, end - normal)
+		_draw_aim_line(origin + normal, end + normal)
+		_draw_aim_line(origin, end)
 	var focus: Vector2 = swarm.skill_center if swarm.skill != SwordSwarm.Skill.NONE else swarm.focus
-	_draw_ellipse(focus, 29, Color(0.7, 0.85, 0.54, 0.3), clock * 0.4, clock * 0.4 + TAU * 0.76)
-	draw_circle(focus, 4, ACCENT)
-	draw_circle(focus, 10, Color(0.75, 0.93, 0.55, 0.1))
-	draw_line(focus + Vector2(-17, 0), focus + Vector2(-9, 0), ACCENT, 1)
-	draw_line(focus + Vector2(9, 0), focus + Vector2(17, 0), ACCENT, 1)
+	var focus_frame := posmod(int(clock * 10), 8)
+	draw_texture_rect_region(PIXELS.FOCUS, Rect2(focus - Vector2(32, 32), Vector2(64, 64)), Rect2(focus_frame * 32, 0, 32, 32))
 	for target in swarm.targets:
 		_draw_target(target)
 	if placing and swarm.bounds.has_point(get_local_mouse_position()):
-		draw_arc(get_local_mouse_position(), 22, 0, TAU, 48, Color(0.85, 0.8, 0.58, 0.65), 1, true)
+		draw_texture_rect(PIXELS.PLACEMENT, Rect2(get_local_mouse_position() - Vector2(32, 32), Vector2(64, 64)), false)
 
-func _draw_ellipse(center: Vector2, radius: float, color: Color, start: float, end: float) -> void:
-	var points := PackedVector2Array()
-	for i in range(97):
-		var a := lerpf(start, end, float(i) / 96)
-		points.append(center + Vector2(cos(a), sin(a) * 0.70) * radius)
-	draw_polyline(points, color, 1.0, true)
+func _draw_aim_line(start: Vector2, finish: Vector2) -> void:
+	draw_set_transform(start, (finish - start).angle())
+	draw_texture_rect(PIXELS.AIM_LINE, Rect2(0, -2, start.distance_to(finish), 4), true)
+	draw_set_transform(Vector2.ZERO)
 
 func _draw_target(target: Dictionary) -> void:
 	var p: Vector2 = target.p
-	var inactive: bool = target.respawn > 0
-	var color := Color("ba8e69").lerp(Color("f0ffd2"), target.flash)
-	if inactive:
-		color.a = 0.18
-	draw_circle(p + Vector2(0, 9), 24, Color(0, 0, 0, 0.16))
-	draw_arc(p, 22, 0, TAU, 40, Color(color, color.a * 0.6), 1, true)
-	draw_arc(p, 13, 0, TAU, 32, color, 1, true)
-	var diamond := PackedVector2Array([p + Vector2(0, -7), p + Vector2(7, 0), p + Vector2(0, 7), p + Vector2(-7, 0), p + Vector2(0, -7)])
-	draw_polyline(diamond, color, 1.5, true)
-	for a in [0.0, PI / 2, PI, PI * 1.5]:
-		draw_line(p + Vector2.from_angle(a) * 19, p + Vector2.from_angle(a) * 27, color, 1, true)
-	draw_line(p + Vector2(-20, 35), p + Vector2(20, 35), Color("273a34"), 2)
-	draw_line(p + Vector2(-20, 35), p + Vector2(-20 + 40.0 * maxf(target.hp, 0) / 16.0, 35), color, 2)
+	var target_frame := 2 if target.respawn > 0 else (1 if target.flash > 0.5 else 0)
+	draw_texture_rect_region(PIXELS.TARGET, Rect2(p - Vector2(32, 30), Vector2(64, 80)), Rect2(target_frame * 32, 0, 32, 40))
+	draw_texture_rect(PIXELS.HP_BG, Rect2(p + Vector2(-24, 38), Vector2(48, 8)), false)
+	if target.respawn <= 0 and target.hp > 0:
+		draw_texture_rect(PIXELS.HP_FILL, Rect2(p + Vector2(-22, 40), Vector2(44.0 * target.hp / 16.0, 4)), false)
 	if target.flash > 0:
-		draw_arc(p, 22 + (1 - target.flash) * 30, 0, TAU, 48, Color(0.84, 0.95, 0.62, target.flash * 0.55), 1, true)
+		var hit_frame := clampi(int((1.0 - target.flash) * 6), 0, 5)
+		draw_texture_rect_region(PIXELS.IMPACT, Rect2(p - Vector2(24, 24), Vector2(48, 48)), Rect2(hit_frame * 24, 0, 24, 24))
 
 func _run_test() -> void:
 	test_frame += 1

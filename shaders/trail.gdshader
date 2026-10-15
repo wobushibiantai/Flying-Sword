@@ -13,11 +13,8 @@ void vertex() {
 
 void fragment() {
     float strength = mix(trail_color.r, trail_color.g, UV.x);
-    float distance_from_axis = abs(UV.y - 0.5) * 8.0;
-    float width = mix(0.12, 0.8, strength);
-    float aa = max(fwidth(distance_from_axis), 0.25);
-    float core = 1.0 - smoothstep(width - aa, width + aa, distance_from_axis);
-    float glow = exp(-distance_from_axis * distance_from_axis * 0.55) * 0.09;
-    vec3 tint = mix(vec3(0.83, 0.94, 0.55), vec3(0.45, 0.87, 0.77), trail_color.b * 0.45);
-    COLOR = vec4(tint, (core * 0.7 + glow) * strength * strength);
+    // Aseprite-authored stepped light bands; no procedural blurred halo.
+    vec4 ink = texture(TEXTURE, UV);
+    vec3 tint = mix(vec3(1.0), vec3(0.68, 1.0, 0.91), trail_color.b * 0.45);
+    COLOR = vec4(ink.rgb * tint, ink.a * strength * strength);
 }

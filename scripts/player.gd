@@ -71,6 +71,4 @@ func update_cast_pose(active: bool, target: Vector2) -> void:
 	queue_redraw()
 
 func draw_ellipse_shadow() -> void:
-	draw_set_transform(Vector2(0, 1), 0, Vector2(1, 0.28))
-	draw_circle(Vector2.ZERO, 15, Color(0, 0, 0, 0.20))
-	draw_set_transform(Vector2.ZERO)
+	draw_texture(preload("res://assets/pixel/combat/shadow.png"), Vector2(-16, -4))
